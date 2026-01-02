@@ -1,0 +1,40 @@
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #0f172a;
+  color: #fff;
+}
+
+.container {
+  padding: 20px;
+  max-width: 800px;
+  margin: auto;
+}
+
+h1 {
+  margin-bottom: 10px;
+}
+
+input {
+  margin-bottom: 15px;
+}
+
+.info p {
+  margin: 4px 0;
+}
+
+canvas {
+  display: block;
+  margin-top: 20px;
+  background: transparent;
+  border: 1px dashed #334155;
+}
+
+button {
+  margin-top: 15px;
+  padding: 10px 15px;
+  background: #2563eb;
+  border: none;
+  color: white;
+  cursor: pointer;
+}
