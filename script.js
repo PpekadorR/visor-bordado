@@ -7,10 +7,11 @@ fileInput.addEventListener("change", async (e) => {
   if (!file) return;
 
   // Verificación CLAVE (evita tu error actual)
-  if (!window.Embroidery || !Embroidery.Reader) {
-    alert("EmbroideryJS no se cargó correctamente");
-    return;
-  }
+  if (!window.Embroidery) {
+  alert("EmbroideryJS no se cargó correctamente");
+  return;
+}
+
 
   const buffer = await file.arrayBuffer();
 
