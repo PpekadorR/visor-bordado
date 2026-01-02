@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Visor de Bordados</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      background: #f4f4f4;
+      display: flex;
+      height: 100vh;
+    }
+    #sidebar {
+      width: 300px;
+      background: #1f2937;
+      color: white;
+      padding: 16px;
+      box-sizing: border-box;
+    }
+    #sidebar h2 { margin-top: 0; font-size: 18px; }
+    #info p { font-size: 14px; margin: 6px 0; }
+    #main { flex: 1; display: flex; flex-direction: column; }
+    #toolbar {
+      background: #ffffff;
+      padding: 8px;
+      display: flex;
+      gap: 8px;
+      border-bottom: 1px solid #ddd;
+      align-items: center;
+    }
+    #canvas-container {
+      flex: 1;
+      background: #e5e7eb;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      overflow: hidden;
+    }
+    canvas { background: transparent; }
+    button { padding: 6px 10px; cursor: pointer; }
+    .error { color: #fecaca; font-size: 13px; margin-top: 10px; }
+  </style>
+</head>
+<body>
+
+<div id="sidebar">
+  <h2>🧵 Bordado</h2>
+  <input type="file" id="fileInput" accept=".dst,.pes,.jef,.exp,.vp3" />
+  <div id="info">
+    <p><b>Formato:</b> <span id="format">-</span></p>
+    <p><b>Ancho real:</b> <span id="width">-</span></p>
+    <p><b>Alto real:</b> <span id="height">-</span></p>
+    <p><b>Puntadas:</b> <span id="stitches">-</span></p>
+    <p><b>Colores:</b> <span id="colors">-</span></p>
+  </div>
+  <div id="error" class="error"></div>
+</div>
+
+<div id="main">
+  <div id="toolbar">
+    <button onclick="zoomIn()">🔍 +</button>
+    <button onclick="zoomOut()">🔍 -</button>
+    <button onclick="resetView()">♻ Reset</button>
+    <button onclick="exportPNG()">🖼️ Exportar PNG</button>
+    <button onclick="animateStitches()">▶ Puntadas</button>
+  </div>
+  <div id="canvas-container">
+    <canvas id="canvas"></canvas>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/embroideryjs@1.0.5/dist/embroidery.js"></script>
+
+<script>
+  const canvas = document.getElementById('canvas');
+  const ctx = canvas.getContext('2d');
+  const errorBox = document.getElementById('error');
+
+  let scale = 1;
+  let designData = null;
+  let mmToPx = 4;
+  let animationIndex = 0;
+  let animating = false;
+
+  function showError(msg) {
+    errorBox.textContent = msg;
+    console.error(msg);
+  }
+
+  document.getElementById('fileInput').addEventListener('change', async (e) => {
+    errorBox.textContent = '';
+    const file = e.target.files[0];
+    if (!file) return;
+
+    try {
+      const buffer = await file.arrayBuffer();
+      const reader = new window.EmbroideryJS.Reader();
+      designData = reader.read(buffer, file.name);
+
+      if (!designData || !designData.stitches) throw new Error('Archivo inválido');
+
+      const widthMM = designData.bounds.width;
+      const heightMM = designData.bounds.height;
+
+      canvas.width = Math.ceil(widthMM * mmToPx);
+      canvas.height = Math.ceil(heightMM * mmToPx);
+
+      document.getElementById('format').textContent = file.name.split('.').pop().toUpperCase();
+      document.getElementById('width').textContent = widthMM.toFixed(2) + ' mm';
+      document.getElementById('height').textContent = heightMM.toFixed(2) + ' mm';
+      document.getElementById('stitches').textContent = designData.stitches.length;
+      document.getElementById('colors').textContent = designData.colors.length;
+
+      scale = 1;
+      renderAll();
+
+    } catch (err) {
+      showError(err.message);
+    }
+  });
+
+  function getThreadColor(stitch) {
+    if (stitch.color) return stitch.color;
+    if (stitch.thread && stitch.thread.rgb) {
+      const { r, g, b } = stitch.thread.rgb;
+      return `rgb(${r},${g},${b})`;
+    }
+    return '#000';
+  }
+
+  function renderAll() {
+    if (!designData) return;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.save();
+    ctx.translate(canvas.width / 2, canvas.height / 2);
+    ctx.scale(scale * mmToPx, scale * mmToPx);
+    ctx.lineWidth = 0.2;
+
+    designData.stitches.forEach(stitch => {
+      ctx.strokeStyle = getThreadColor(stitch);
+      ctx.beginPath();
+      ctx.moveTo(stitch.x, -stitch.y);
+      ctx.lineTo(stitch.x + 0.01, -stitch.y + 0.01);
+      ctx.stroke();
+    });
+    ctx.restore();
+  }
+
+  function animateStitches() {
+    if (!designData) return;
+    animating = true;
+    animationIndex = 0;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    requestAnimationFrame(stepAnimation);
+  }
+
+  function stepAnimation() {
+    if (!animating || animationIndex >= designData.stitches.length) {
+      animating = false;
+      return;
+    }
+
+    ctx.save();
+    ctx.translate(canvas.width / 2, canvas.height / 2);
+    ctx.scale(scale * mmToPx, scale * mmToPx);
+    ctx.lineWidth = 0.2;
+
+    const stitch = designData.stitches[animationIndex];
+    ctx.strokeStyle = getThreadColor(stitch);
+    ctx.beginPath();
+    ctx.moveTo(stitch.x, -stitch.y);
+    ctx.lineTo(stitch.x + 0.01, -stitch.y + 0.01);
+    ctx.stroke();
+
+    ctx.restore();
+    animationIndex++;
+    requestAnimationFrame(stepAnimation);
+  }
+
+  function zoomIn() { scale *= 1.2; renderAll(); }
+  function zoomOut() { scale /= 1.2; renderAll(); }
+  function resetView() { scale = 1; renderAll(); }
+
+  function exportPNG() {
+    if (!designData) return;
+    const link = document.createElement('a');
+    link.download = 'bordado.png';
+    link.href = canvas.toDataURL('image/png'); // fondo transparente
+    link.click();
+  }
+</script>
+</body>
+</html>
