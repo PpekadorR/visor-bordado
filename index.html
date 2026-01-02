@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>🧵 Visor de Bordado</title>
+
+  <link rel="stylesheet" href="style.css">
+
+  <!-- Embroidery.js (CDN correcto) -->
+  <script src="https://cdn.jsdelivr.net/npm/embroideryjs@1.0.0/dist/embroidery.min.js"></script>
+</head>
+
+<body>
+  <div class="container">
+    <h1>🧵 Bordado</h1>
+
+    <input type="file" id="fileInput" accept=".pes,.dst,.jef,.exp">
+
+    <div class="info">
+      <p><b>Formato:</b> <span id="format">-</span></p>
+      <p><b>Ancho real:</b> <span id="width">-</span> mm</p>
+      <p><b>Alto real:</b> <span id="height">-</span> mm</p>
+      <p><b>Puntadas:</b> <span id="stitches">-</span></p>
+      <p><b>Colores:</b> <span id="colors">-</span></p>
+    </div>
+
+    <canvas id="canvas"></canvas>
+
+    <button id="exportPNG">Exportar PNG</button>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
