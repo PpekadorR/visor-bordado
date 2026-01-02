@@ -1,0 +1,36 @@
+
+body {
+  margin: 0;
+  display: flex;
+  height: 100vh;
+  font-family: Arial, sans-serif;
+  background: #0f172a;
+  color: #e5e7eb;
+}
+
+#sidebar {
+  width: 260px;
+  padding: 16px;
+  background: #020617;
+  box-sizing: border-box;
+}
+
+#sidebar h2 {
+  margin-top: 0;
+}
+
+#canvas-container {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+canvas {
+  background: transparent;
+}
+button {
+  margin-top: 10px;
+  padding: 6px 10px;
+  cursor: pointer;
+}
