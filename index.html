@@ -1,195 +1,45 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8">
-<title>Visor Bordado Pro</title>
-
+<meta charset="UTF-8" />
+<title>Visor Profesional de Bordados</title>
 <style>
 body {
-  margin: 0;
   font-family: Arial, sans-serif;
-  background: #111;
-  color: #fff;
-  display: flex;
-  height: 100vh;
-}
-#sidebar {
-  width: 260px;
-  background: #1f2937;
-  padding: 16px;
-}
-#main {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-}
-#toolbar {
-  background: #000;
-  padding: 8px;
-  display: flex;
-  gap: 8px;
-}
-#canvas-container {
-  flex: 1;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  background: #222;
+  background:#111;
+  color:#eee;
+  margin:0;
+  padding:20px;
 }
 canvas {
   background: transparent;
+  border:1px solid #444;
+}
+.controls {
+  margin-bottom:10px;
 }
 button {
-  cursor: pointer;
+  padding:6px 12px;
+}
+.info {
+  font-size:13px;
+  color:#aaa;
 }
 </style>
 </head>
-
 <body>
 
-<div id="sidebar">
-  <h3>🧵 Visor Bordado</h3>
+<h2>🧵 Visor de Bordados Digitales</h2>
 
-  <input type="file" id="fileInput"
-    accept=".dst,.pes,.jef,.exp,.vp3">
-
-  <p>Previsualización real</p>
-
-  <button onclick="exportPNG()">⬇ Exportar PNG</button>
+<div class="controls">
+  <input type="file" id="fileInput" />
+  <button onclick="exportPNG()">Exportar PNG</button>
 </div>
 
-<div id="main">
-  <div id="toolbar">
-    <button onclick="zoom(1.2)">+</button>
-    <button onclick="zoom(0.8)">−</button>
-    <button onclick="resetView()">Reset</button>
-  </div>
+<canvas id="canvas" width="800" height="800"></canvas>
 
-  <div id="canvas-container">
-    <canvas id="canvas" width="900" height="900"></canvas>
-  </div>
-</div>
+<p class="info" id="info"></p>
 
-<!-- ✅ EMBROIDERY.JS FUNCIONAL (UMD) -->
-<script src="https://unpkg.com/embroideryjs/dist/embroidery.js"></script>
-
-<script>
-const canvas = document.getElementById("canvas");
-const ctx = canvas.getContext("2d");
-
-let scale = 1;
-let stitches = [];
-let bounds = null;
-
-document.getElementById("fileInput").addEventListener("change", async (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
-
-  if (typeof Embroidery === "undefined") {
-    alert("Embroidery.js NO se cargó");
-    return;
-  }
-
-  const buffer = await file.arrayBuffer();
-  const design = Embroidery.read(buffer);
-
-  stitches = [];
-  let x = 0;
-  let y = 0;
-
-  // 🔴 CLAVE: dx / dy son movimientos RELATIVOS
-  design.stitches.forEach(s => {
-    if (s.command === "stitch") {
-      x += s.dx;
-      y += s.dy;
-      stitches.push({
-        x,
-        y,
-        color: s.color || "#000000"
-      });
-    }
-  });
-
-  if (!stitches.length) {
-    alert("Archivo sin puntadas visibles");
-    return;
-  }
-
-  calcularBounds();
-  scale = 1;
-  render();
-});
-
-function calcularBounds() {
-  const xs = stitches.map(p => p.x);
-  const ys = stitches.map(p => p.y);
-
-  bounds = {
-    minX: Math.min(...xs),
-    maxX: Math.max(...xs),
-    minY: Math.min(...ys),
-    maxY: Math.max(...ys)
-  };
-}
-
-function render() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  if (!bounds) return;
-
-  const width = bounds.maxX - bounds.minX;
-  const height = bounds.maxY - bounds.minY;
-
-  const s = Math.min(
-    canvas.width / width,
-    canvas.height / height
-  ) * 0.9 * scale;
-
-  ctx.save();
-
-  // Centro del canvas
-  ctx.translate(canvas.width / 2, canvas.height / 2);
-
-  // Escala y eje Y invertido
-  ctx.scale(s, -s);
-
-  // Centrar diseño
-  ctx.translate(
-    -(bounds.minX + width / 2),
-    -(bounds.minY + height / 2)
-  );
-
-  ctx.lineWidth = 1 / s;
-
-  // 🧵 DIBUJO EN ORDEN REAL DE PUNTADAS
-  stitches.forEach(p => {
-    ctx.strokeStyle = p.color;
-    ctx.beginPath();
-    ctx.moveTo(p.x, p.y);
-    ctx.lineTo(p.x + 0.1, p.y + 0.1);
-    ctx.stroke();
-  });
-
-  ctx.restore();
-}
-
-function zoom(factor) {
-  scale *= factor;
-  render();
-}
-
-function resetView() {
-  scale = 1;
-  render();
-}
-
-// 🖼️ PNG TRANSPARENTE
-function exportPNG() {
-  const link = document.createElement("a");
-  link.download = "bordado.png";
-  link.href = canvas.toDataURL("image/png");
-  link.click();
-}
-</script>
-
+<script src="viewer.js"></script>
 </body>
 </html>
