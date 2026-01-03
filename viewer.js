@@ -1,115 +1,112 @@
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
+const info = document.getElementById("info");
 
-let scale = 1;
-let stitches = [];
-let bounds = null;
-
-document.getElementById("fileInput").addEventListener("change", async (e) => {
+document.getElementById("fileInput").addEventListener("change", e => {
   const file = e.target.files[0];
   if (!file) return;
+  const ext = file.name.split(".").pop().toLowerCase();
+  const reader = new FileReader();
 
-  if (typeof Embroidery === "undefined") {
-    alert("EmbroideryJS no se cargó");
-    return;
-  }
+  reader.onload = () => {
+    const buffer = reader.result;
+    loadDesign(ext, buffer);
+  };
 
-  const buffer = await file.arrayBuffer();
-  const design = Embroidery.read(buffer);
-
-  stitches = [];
-  let x = 0;
-  let y = 0;
-
-  // 🔴 FIX IMPORTANTE: dx / dy son relativos
-  design.stitches.forEach(s => {
-    if (s.command === "stitch") {
-      x += s.dx;
-      y += s.dy;
-      stitches.push({
-        x,
-        y,
-        color: s.color || "#000000"
-      });
-    }
-  });
-
-  if (!stitches.length) {
-    alert("El archivo no contiene puntadas visibles");
-    return;
-  }
-
-  calcularBounds();
-  scale = 1;
-  render();
+  reader.readAsArrayBuffer(file);
 });
 
-function calcularBounds() {
-  const xs = stitches.map(p => p.x);
-  const ys = stitches.map(p => p.y);
+function loadDesign(ext, buffer) {
+  ctx.clearRect(0,0,canvas.width,canvas.height);
 
-  bounds = {
-    minX: Math.min(...xs),
-    maxX: Math.max(...xs),
-    minY: Math.min(...ys),
-    maxY: Math.max(...ys)
-  };
+  if (ext === "dst") {
+    const design = parseDST(buffer);
+    renderDesign(design);
+  } else if (["pes","jef","exp"].includes(ext)) {
+    alert("Formato detectado. Parser básico aún en desarrollo.");
+  } else if (["emb","art","vp3","vip","hus"].includes(ext)) {
+    alert("Formato de diseño propietario. No se puede previsualizar en web.");
+  } else {
+    alert("Formato no soportado.");
+  }
 }
 
-function render() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  if (!bounds) return;
+function parseDST(buffer) {
+  const data = new Uint8Array(buffer);
+  let x=0, y=0;
+  let stitches=[];
+  let colorIndex=0;
 
-  const width = bounds.maxX - bounds.minX;
-  const height = bounds.maxY - bounds.minY;
+  for (let i=512;i<data.length;i+=3) {
+    let b1=data[i], b2=data[i+1], b3=data[i+2];
 
-  const s = Math.min(
-    canvas.width / width,
-    canvas.height / height
-  ) * 0.9 * scale;
+    if ((b3 & 0xF3) === 0xF3) break;
 
-  ctx.save();
+    let dx = ((b1 & 0x01)?1:0)*1 + ((b1 & 0x04)?1:0)*9
+           - ((b1 & 0x02)?1:0)*1 - ((b1 & 0x08)?1:0)*9;
 
-  // Centro del canvas
-  ctx.translate(canvas.width / 2, canvas.height / 2);
+    let dy = ((b2 & 0x01)?1:0)*1 + ((b2 & 0x04)?1:0)*9
+           - ((b2 & 0x02)?1:0)*1 - ((b2 & 0x08)?1:0)*9;
 
-  // Escala real y eje Y invertido
-  ctx.scale(s, -s);
+    x += dx;
+    y += dy;
 
-  // Centrar diseño
-  ctx.translate(
-    -(bounds.minX + width / 2),
-    -(bounds.minY + height / 2)
-  );
+    if (b3 & 0x40) colorIndex++;
 
-  ctx.lineWidth = 1 / s;
+    stitches.push({x,y,color:colorIndex});
+  }
 
-  // 🔵 Dibujo en ORDEN REAL DE PUNTADAS
-  stitches.forEach(p => {
-    ctx.strokeStyle = p.color;
-    ctx.beginPath();
-    ctx.moveTo(p.x, p.y);
-    ctx.lineTo(p.x + 0.1, p.y + 0.1);
-    ctx.stroke();
+  return stitches;
+}
+
+function renderDesign(stitches) {
+  if (!stitches.length) return;
+
+  let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
+  stitches.forEach(s=>{
+    minX=Math.min(minX,s.x);
+    minY=Math.min(minY,s.y);
+    maxX=Math.max(maxX,s.x);
+    maxY=Math.max(maxY,s.y);
   });
 
-  ctx.restore();
+  const w=maxX-minX;
+  const h=maxY-minY;
+  const scale=Math.min(canvas.width/w,canvas.height/h)*0.9;
+
+  ctx.translate(canvas.width/2,canvas.height/2);
+  ctx.scale(scale,scale);
+  ctx.translate(- (minX+maxX)/2, - (minY+maxY)/2);
+
+  ctx.lineWidth=1/scale;
+
+  let last=null;
+  stitches.forEach(s=>{
+    if (!last) { last=s; return; }
+    ctx.strokeStyle = colorFromIndex(s.color);
+    ctx.beginPath();
+    ctx.moveTo(last.x,last.y);
+    ctx.lineTo(s.x,s.y);
+    ctx.stroke();
+    last=s;
+  });
+
+  ctx.setTransform(1,0,0,1,0,0);
+
+  info.textContent =
+    `Puntadas: ${stitches.length} | Tamaño aprox: ${(w/10).toFixed(1)} x ${(h/10).toFixed(1)} mm`;
 }
 
-function zoom(factor) {
-  scale *= factor;
-  render();
+function colorFromIndex(i) {
+  const palette=[
+    "#000","#f00","#0f0","#00f","#ff0","#f0f","#0ff","#fff"
+  ];
+  return palette[i%palette.length];
 }
 
-function resetView() {
-  scale = 1;
-  render();
-}
-
-// PNG TRANSPARENTE
 function exportPNG() {
-  const link = document.createElement("a");
-  link.download = "bordado.png";
-  link.href = canvas.toDataURL("image/png");
+  const link=document.createElement("a");
+  link.download="bordado.png";
+  link.href=canvas.toDataURL("image/png");
   link.click();
 }
