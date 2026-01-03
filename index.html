@@ -1,44 +1,23 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8" />
+<meta charset="UTF-8">
 <title>Visor Profesional de Bordados</title>
 <style>
-body {
-  font-family: Arial, sans-serif;
-  background:#111;
-  color:#eee;
-  margin:0;
-  padding:20px;
-}
-canvas {
-  background: transparent;
-  border:1px solid #444;
-}
-.controls {
-  margin-bottom:10px;
-}
-button {
-  padding:6px 12px;
-}
-.info {
-  font-size:13px;
-  color:#aaa;
-}
+body { background:#111; color:#eee; font-family:Arial; padding:20px }
+canvas { border:1px solid #444; background:transparent }
+button { margin-left:5px }
 </style>
 </head>
 <body>
 
-<h2>🧵 Visor de Bordados Digitales</h2>
+<h2>🧵 Visor de Bordados</h2>
+<input type="file" id="fileInput">
+<button onclick="exportPNG()">Exportar PNG</button>
 
-<div class="controls">
-  <input type="file" id="fileInput" />
-  <button onclick="exportPNG()">Exportar PNG</button>
-</div>
-
-<canvas id="canvas" width="800" height="800"></canvas>
-
-<p class="info" id="info"></p>
+<br><br>
+<canvas id="canvas" width="900" height="900"></canvas>
+<p id="info"></p>
 
 <script src="viewer.js"></script>
 </body>
